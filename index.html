@@ -442,6 +442,98 @@
   }
   .toast.show { opacity: 1; transform: translateY(0); }
 
+  /* PROXY SECTION */
+  .proxy-section {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .proxy-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .proxy-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--text3);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .proxy-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    background: rgba(255,64,129,0.15);
+    border: 1px solid rgba(255,64,129,0.3);
+    color: var(--accent2);
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+  .proxy-badge.on {
+    background: rgba(105,255,71,0.12);
+    border-color: rgba(105,255,71,0.3);
+    color: var(--accent3);
+  }
+  .toggle-wrap { display: flex; align-items: center; gap: 8px; }
+  .toggle-label { font-size: 12px; color: var(--text2); }
+  /* toggle switch */
+  .toggle { position: relative; width: 38px; height: 20px; flex-shrink: 0; }
+  .toggle input { opacity:0; width:0; height:0; }
+  .toggle-slider {
+    position: absolute; inset: 0;
+    background: var(--surface3);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border: 1px solid var(--border);
+  }
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    left: 3px; top: 3px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--text3);
+    transition: transform 0.2s, background 0.2s;
+  }
+  .toggle input:checked + .toggle-slider { background: rgba(105,255,71,0.15); border-color: var(--accent3); }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(18px); background: var(--accent3); }
+  .proxy-row {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+  }
+  .proxy-input {
+    flex: 1;
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .proxy-input::placeholder { color: var(--text3); }
+  .proxy-input:focus { border-color: var(--accent3); }
+  .proxy-hint {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text3);
+    line-height: 1.6;
+  }
+  .proxy-hint a { color: var(--accent); text-decoration: none; }
+  .proxy-hint a:hover { text-decoration: underline; }
+
   /* KEYBOARD HINT */
   .kbd-hints {
     display: flex; gap: 16px; flex-wrap: wrap;
@@ -500,6 +592,36 @@
       <button class="preset-btn" data-url="https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8">Mux Demo</button>
       <button class="preset-btn" data-url="https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8">Apple HLS</button>
       <button class="preset-btn" data-url="https://test-streams.mux.dev/test_001/stream.m3u8">Test #001</button>
+    </div>
+  </div>
+
+  <!-- PROXY SECTION -->
+  <div class="proxy-section" id="proxySection">
+    <div class="proxy-header">
+      <div class="proxy-title">
+        CORS Proxy
+        <span class="proxy-badge" id="proxyBadge">OFF</span>
+      </div>
+      <div class="toggle-wrap">
+        <span class="toggle-label">Enable proxy</span>
+        <label class="toggle">
+          <input type="checkbox" id="proxyToggle">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+    <div id="proxyInputWrap" style="display:none; flex-direction:column; gap:8px;">
+      <div class="proxy-row">
+        <input class="proxy-input" id="proxyInput" type="text"
+          placeholder="https://your-worker.your-name.workers.dev"
+          autocomplete="off" spellcheck="false">
+      </div>
+      <div class="proxy-hint">
+        Deploy <strong>cors-proxy-worker.js</strong> to
+        <a href="https://workers.cloudflare.com" target="_blank">Cloudflare Workers</a>
+        (free), paste the worker URL above, then load your stream.
+        The proxy rewrites all M3U8 segments automatically.
+      </div>
     </div>
   </div>
 
@@ -712,6 +834,40 @@
     centerPlay.classList.add('flash');
   }
 
+  /* ---- PROXY ---- */
+  const proxyToggle = document.getElementById('proxyToggle');
+  const proxyInputWrap = document.getElementById('proxyInputWrap');
+  const proxyInput = document.getElementById('proxyInput');
+  const proxyBadge = document.getElementById('proxyBadge');
+
+  // Restore saved proxy settings
+  proxyInput.value = localStorage.getItem('strmr_proxy_url') || '';
+  if (localStorage.getItem('strmr_proxy_on') === '1') {
+    proxyToggle.checked = true;
+    proxyInputWrap.style.display = 'flex';
+    proxyBadge.textContent = 'ON';
+    proxyBadge.classList.add('on');
+  }
+
+  proxyToggle.addEventListener('change', () => {
+    const on = proxyToggle.checked;
+    proxyInputWrap.style.display = on ? 'flex' : 'none';
+    proxyBadge.textContent = on ? 'ON' : 'OFF';
+    proxyBadge.classList.toggle('on', on);
+    localStorage.setItem('strmr_proxy_on', on ? '1' : '0');
+  });
+
+  proxyInput.addEventListener('input', () => {
+    localStorage.setItem('strmr_proxy_url', proxyInput.value.trim());
+  });
+
+  function applyProxy(url) {
+    if (!proxyToggle.checked) return url;
+    const base = proxyInput.value.trim().replace(/\/$/, '');
+    if (!base) { showToast('⚠ Enter your Worker URL first'); return url; }
+    return `${base}?url=${encodeURIComponent(url)}`;
+  }
+
   /* ---- PLAYER LOAD ---- */
   function loadStream(url) {
     url = url.trim();
@@ -728,6 +884,8 @@
     // reset quality
     qualitySelect.innerHTML = '<option value="-1">Auto</option>';
 
+    const proxiedUrl = applyProxy(url);
+
     if (Hls.isSupported()) {
       hls = new Hls({
         maxBufferLength: 60,
@@ -735,7 +893,7 @@
         startLevel: -1,
         enableWorker: true,
       });
-      hls.loadSource(url);
+      hls.loadSource(proxiedUrl);
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
@@ -795,7 +953,7 @@
 
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       // Safari native HLS
-      video.src = url;
+      video.src = proxiedUrl;
       video.addEventListener('loadedmetadata', () => {
         loadingOverlay.classList.remove('active');
         setStatus('ok', 'Native HLS — Safari mode');
